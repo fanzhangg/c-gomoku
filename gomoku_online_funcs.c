@@ -13,7 +13,6 @@
 
 #include "socket.h"
 #include "gomoku_online.h"
-#include "mat.h"
 
 extern fd_set allset;
 

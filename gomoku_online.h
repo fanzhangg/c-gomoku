@@ -1,4 +1,5 @@
 #include <netinet/in.h>
+#include "mat.h"
 
 #define MAX_NAME 30
 #define MAX_BUF 256
@@ -22,7 +23,7 @@ struct client {
 };
 
 struct game_state {
-    int stone_mat;
+    mat_t *stone_mat;
     struct client *white;   // white player, NULL if white does not exist/leave
     struct client *black;   // black player, NULL if black does not exist/leave
 };
