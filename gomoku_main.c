@@ -1,6 +1,7 @@
-# include <stdio.h>
-# include "mat.h"
-# include "gomoku.h"
+#include <stdio.h>
+
+#include "mat.h"
+#include "gomoku.h"
 
 // update the value at (row, col) of stone_mat and score_mat
 // (row, col) must be a valid coordinate
