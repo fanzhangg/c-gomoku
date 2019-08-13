@@ -81,12 +81,18 @@ int read_from_input(char *line, int fd){
         return -1;
     }
     if (line[1] == '\n' && line[0] == '\r'){
-        printf("Warning: the line only contains escape char\n");
-        printf("line[0]: %c", line[0]);
-        return -2;
+        printf("Warning: read an empty line\n");
+        return 0;
     }
     line[char_len] = '\0';
     printf("[%d] Read %d bytes: %s\n", fd, char_len, line);
+    // handle the newline escape chars \r\n
+    if (line[char_len-1] == '\n'){
+        line[char_len-2] = '\0'; // strip \r\n
+    } else {    // read \r\n
+        char tmp[3];
+        read(fd, tmp, 3);
+    }
     return char_len;
 }
 
@@ -94,7 +100,7 @@ int read_from_input(char *line, int fd){
  * return: 1 if the player wins, else 0
 */
 int check_win(mat_t *stone_mat, int row, int col, int player){
-        int total = 0;  // total number of stones in a chain
+    int total = 0;  // total number of stones in a chain
     // check col
     for (int i = row; mat_get(stone_mat, i, col) == player; i++){   // upper row
         total++;
@@ -102,8 +108,7 @@ int check_win(mat_t *stone_mat, int row, int col, int player){
     for (int i = row-1; mat_get(stone_mat, i, col) == player; i--){ // lower row
         total++;
     }
-
-    if (total == 5){
+    if (total >= 5){
         return 1;
     }
 
@@ -116,8 +121,7 @@ int check_win(mat_t *stone_mat, int row, int col, int player){
     for (int j = col-1; mat_get(stone_mat, row, j) == player; j--){
         total++;
     }
-
-    if (total == 5){
+    if (total >= 5){
         return 1;
     }
 
@@ -133,7 +137,7 @@ int check_win(mat_t *stone_mat, int row, int col, int player){
         total++;
     }
 
-    if (total == 5){
+    if (total >= 5){
         return 1;
     }
 
@@ -148,9 +152,32 @@ int check_win(mat_t *stone_mat, int row, int col, int player){
     for (int k = -1; mat_get(stone_mat, row+k, col-k) == player; k--){
         total++;
     }
-
-    if (total == 5){
+    if (total >= 5){
         return 1;
     }
     return 0;
+}
+
+/* Write the board to the client, format as:
+ * |○|●|
+ * |●|○|
+ */
+void write_board(mat_t *mat, int fd){
+    int **data = mat->data;
+    int rows = mat->rows;
+    int cols = mat->cols;
+    for (int i = 0; i < rows; i++){
+        for (int j = 0; j < cols; j++){
+            char *tmp;
+            if (data[i][j] == 0){
+                tmp = "| ";
+            } else if (data[i][j] == 1){
+                tmp = "|○";
+            } else {
+                tmp = "|●";
+            }
+            write(fd, tmp, strlen(tmp));
+        }
+        write(fd, "|\n", 2);
+    }
 }

@@ -33,9 +33,9 @@ int mat_get(mat_t *mat, int row, int col){
 }
 
 // add value to (row, col) of mat
-// return: 0 if success, else 1
+// return: 0 if success, else 1 if the position is out of bound
 int mat_add(mat_t *mat, int row, int col, int value){
-        if (row < 0 || row >= mat->rows){
+    if (row < 0 || row >= mat->rows){
         printf("Error: the row index %d is out of bound\n", row);
         return 1;
     }

@@ -20,6 +20,8 @@ struct client {
     char name[MAX_NAME];
     char inbuf[MAX_BUF];    // hold input from client
     char *in_ptr;   // a pointer into inbuf for reading
+    int id; // 1 if black, 2 if white
+    char *stone_name; // "black"/"white"
 };
 
 struct game_state {
@@ -38,3 +40,4 @@ int read_from_input(char *line, int fd);
 // game functions
 void init_game(struct game_state *game);
 int check_win(mat_t *stone_mat, int row, int col, int player);
+void write_board(mat_t *mat, int fd);
