@@ -3,32 +3,6 @@
 #include "mat.h"
 #include "gomoku.h"
 
-// update the value at (row, col) of stone_mat and score_mat
-// (row, col) must be a valid coordinate
-// return: the score of the grid
-// int place_stone(int row, int col, int player){
-
-//     stone_mat.data[row][col] = player; // update stone_mat
-    
-//     // // find out the max score of the player's stones around (row, col)
-//     // int max_score = 0;
-//     // for (int i = row-1; i <= row+1; i++){
-//     //     for (int j = col-1; j <= cols+1; j++){
-//     //         int temp_value = mat_get(&score_mat, i, j);
-//     //         int temp_player = mat_get(&stone_mat, i, j);
-//     //         if (temp_value >= max_score && temp_player == palyer){
-//     //             max_score = value;
-//     //         }
-//     //     }
-//     // }
-//     // max_score++;
-
-//     // //TODO: increase scores of the grid and 8 adjacent grids if it is the same player
-    
-//     // score_mat.data[row][col] = max_score;    // update score_mat
-//     return max_score;
-// }
-
 int main(){
     mat_init(&stone_mat, rows, cols);
     mat_init(&score_mat, rows, cols);

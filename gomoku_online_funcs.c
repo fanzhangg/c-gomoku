@@ -61,9 +61,96 @@ void remove_player(struct client **top, int fd){    // loop through all clients
     }
 }
 
-/* Init the stone mat, balck and white to NULL */
+/* init the stone mat, balck and white to NULL */
 void init_game(struct game_state *game){
-    mat_init(game->stone_mat, MAT_ROW, MAT_COL);
+    mat_init(&game->stone_mat, MAT_ROW, MAT_COL);
     game->black = NULL;
     game->white = NULL;
+}
+
+/* read the input, handle network newline
+ * return: total number of characters read, -1 if an error errors
+ * return: -2 if the line is empty (only contain escape character) and assign lien to be an empty string
+*/
+int read_from_input(char *line, int fd){
+    line[0] = '\0';
+
+    int char_len = read(fd, line, MAX_BUF);
+    if (char_len == -1){  
+        perror("read");
+        return -1;
+    }
+    if (line[1] == '\n' && line[0] == '\r'){
+        printf("Warning: the line only contains escape char\n");
+        printf("line[0]: %c", line[0]);
+        return -2;
+    }
+    line[char_len] = '\0';
+    printf("[%d] Read %d bytes: %s\n", fd, char_len, line);
+    return char_len;
+}
+
+/* check if the player wins (form a unbreakable chain of 5)
+ * return: 1 if the player wins, else 0
+*/
+int check_win(mat_t *stone_mat, int row, int col, int player){
+        int total = 0;  // total number of stones in a chain
+    // check col
+    for (int i = row; mat_get(stone_mat, i, col) == player; i++){   // upper row
+        total++;
+    }
+    for (int i = row-1; mat_get(stone_mat, i, col) == player; i--){ // lower row
+        total++;
+    }
+
+    if (total == 5){
+        return 1;
+    }
+
+    total = 0;
+
+    // check row
+    for (int j = col; mat_get(stone_mat, row, j) == player; j++){
+        total++;
+    }
+    for (int j = col-1; mat_get(stone_mat, row, j) == player; j--){
+        total++;
+    }
+
+    if (total == 5){
+        return 1;
+    }
+
+    // check right lower diagnal
+    // 1 0 0
+    // 0 1 0
+    // 0 0 1
+    total = 0;
+    for (int k = 0; mat_get(stone_mat, row+k, col+k) == player; k++){
+        total++;
+    }
+    for (int k = -1; mat_get(stone_mat, row+k, col+k) == player; k--){
+        total++;
+    }
+
+    if (total == 5){
+        return 1;
+    }
+
+    // check right upper diagnal
+    // 0 0 1
+    // 0 1 0
+    // 1 0 0
+    total = 0;
+    for (int k = 0; mat_get(stone_mat, row+k, col-k) == player; k++){
+        total++;
+    }
+    for (int k = -1; mat_get(stone_mat, row+k, col-k) == player; k--){
+        total++;
+    }
+
+    if (total == 5){
+        return 1;
+    }
+    return 0;
 }

@@ -2,7 +2,7 @@
 #include "mat.h"
 
 #define MAX_NAME 30
-#define MAX_BUF 256
+#define MAX_BUF 256 // the max length of string that can be read
 #define WELCOME_MSG "Welcome to the world of Gomoku. What is your name?\n";
 
 #ifndef PORT
@@ -23,7 +23,7 @@ struct client {
 };
 
 struct game_state {
-    mat_t *stone_mat;
+    mat_t stone_mat;
     struct client *white;   // white player, NULL if white does not exist/leave
     struct client *black;   // black player, NULL if black does not exist/leave
 };
@@ -32,7 +32,9 @@ struct game_state {
 void add_player(struct client **top, int fd, struct in_addr addr);
 void remove_player(struct client **top, int fd);
 struct client *get_new_client(int fd, struct in_addr ipaaddr);
+int read_from_input(char *line, int fd);
 
 
 // game functions
 void init_game(struct game_state *game);
+int check_win(mat_t *stone_mat, int row, int col, int player);
