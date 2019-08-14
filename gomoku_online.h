@@ -22,6 +22,7 @@ struct client {
     char *in_ptr;   // a pointer into inbuf for reading
     int id; // 1 if black, 2 if white
     char *stone_name; // "black"/"white"
+    int score; // number of winning
 };
 
 struct game_state {

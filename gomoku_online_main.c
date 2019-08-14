@@ -24,23 +24,21 @@ fd_set allset;
  */
 struct client *new_players = NULL;
 
-
-
-int main(int argc, char **argv){
+/* Connect white and black players
+ * return: 0 if connection succeeds, 1 if connections fails
+ */
+int connect_players(struct game_state *game, struct sockaddr_in *server){
     int clientfd;
     struct sockaddr_in connection;
 
-    // init game
-    struct game_state game;
-    init_game(&game);
-    printf("Init game\n");
-    mat_print(&game.stone_mat);
+    // zero out stone_mat
+    mat_zero_out(&game->stone_mat);
 
     // init server socket
-    struct sockaddr_in *server = init_server_addr(PORT);
     int listenfd = set_up_server_socket(server, MAX_QUEUE);
 
     // allow white and balck palyer to connect to the game
+    //TODO: handle more than 3 clients, a client quits in the middle of the game
     while (1){
             printf("A new client is connecting\n");
             clientfd = accept_connection(listenfd);
@@ -50,37 +48,47 @@ int main(int argc, char **argv){
             if (write(clientfd, GREET_MSG, strlen(GREET_MSG)) == -1){
                 fprintf(stderr, "Error: fail to write to client %s\n", inet_ntoa(connection.sin_addr));
             }
-            else if (game.black == NULL){   // the first player entering the game plays as black
+            else if (game->black == NULL){   // the first player entering the game plays as black
                 char *player_info = "You play as black stone\nWaiting for another player...\n";
                 write(clientfd, player_info, strlen(player_info));
-                game.black = get_new_client(clientfd, connection.sin_addr);
-                game.black->id = 2;
-                game.black->stone_name = "black";
+                game->black = get_new_client(clientfd, connection.sin_addr);
+                game->black->id = 2;
+                game->black->stone_name = "black";
                 printf("Balck has entered the game\n");
-            } else if (game.white == NULL){
+            } else if (game->white == NULL){
                 char *PLAYER_INFO = "You play as white stone\n";
                 write(clientfd, PLAYER_INFO, strlen(PLAYER_INFO));
-                game.white = get_new_client(clientfd, connection.sin_addr);
-                game.white->id = 1;
-                game.white->stone_name = "white";
+                game->white = get_new_client(clientfd, connection.sin_addr);
+                game->white->id = 1;
+                game->white->stone_name = "white";
                 printf("White has entered the game\n");
             }
-            if (game.black != NULL && game.white != NULL){  // both black and white have entered the game
-                printf("Black: %s, White: %s\n", inet_ntoa(game.black->ipaddr), inet_ntoa(game.white->ipaddr));
+            if (game->black != NULL && game->white != NULL){  // both black and white have entered the game
+                printf("Black: %s, White: %s\n", inet_ntoa(game->black->ipaddr), inet_ntoa(game->white->ipaddr));
                 printf("Game starts\n");
-                char *START_MSG = "Game starts!\n";
-                write(game.black->fd, START_MSG, strlen(START_MSG));
-                write(game.white->fd, START_MSG, strlen(START_MSG));
+                char *START_MSG = "Game starts!\n";               
+                write(game->black->fd, START_MSG, strlen(START_MSG));
+                write(game->white->fd, START_MSG, strlen(START_MSG));
                 break;
             }
     }
+    return 0;
+}
+
+
+/* Play one round of game
+ * return: 1 if black wins, 2 if white wins
+ */
+int play_round(struct game_state *game){
 
     // balck moves first
-    struct client *player = game.black;
-    struct client *opponent = game.white;
-    // char *player_str = "black";
-    //int player_id = 1;
+    struct client *player = game->black;
+    struct client *opponent = game->white;
 
+    // write the board to the client
+    write_board(&game->stone_mat, player->fd);
+    write_board(&game->stone_mat, opponent->fd);
+    mat_print(&game->stone_mat);
 
     // make a move
     while (1){
@@ -88,6 +96,7 @@ int main(int argc, char **argv){
         int col = 0;
 
         // get input from player & update matrix
+        //TODO: read input only when it is the player's turn
         char *TURN_MSG = "It is your turn\n"; 
         write(player->fd, TURN_MSG, strlen(TURN_MSG)); 
 
@@ -109,31 +118,31 @@ int main(int argc, char **argv){
                 printf("Error: invalid format %s\n", player->inbuf);
                 char *FORMAT_ERR = "Error: invalid format. usage: <row> <col>\n";
                 write(player->fd, FORMAT_ERR, strlen(FORMAT_ERR));
-            } else if (row < 0 | row > game.stone_mat.rows){    // row out of bound
+            } else if (row < 0 || row > game->stone_mat.rows){    // row out of bound
                 printf("Error: row %d out of bound\n", row);
                 char *ROW_ERR = "Error: row out of bound\n";
                 write(player->fd, ROW_ERR, strlen(ROW_ERR));
-            } else if (col < 0 | col > game.stone_mat.cols){    // col out of bound
+            } else if (col < 0 || col > game->stone_mat.cols){    // col out of bound
                 printf("Error: row %d out of bound\n", col);
                 char *COL_ERR = "Error: column out of bound\n";
                 write(player->fd, COL_ERR, strlen(COL_ERR));
-            } else if (game.stone_mat.data[row][col] != 0){    // position occupied
+            } else if (game->stone_mat.data[row][col] != 0){    // position occupied
                 printf("Error: (%d, %d) has been occupied\n", row, col);
                 char *OCCUPY_ERR = "Error: position occupied\n";
                 write(player->fd, OCCUPY_ERR, strlen(OCCUPY_ERR));
             } else {
-                mat_add(&game.stone_mat, row, col, player->id);
+                mat_add(&game->stone_mat, row, col, player->id);
                 break;
             }
         }
 
         // write the board to the client
-        write_board(&game.stone_mat, player->fd);
-        write_board(&game.stone_mat, opponent->fd);
-        mat_print(&game.stone_mat);
+        write_board(&game->stone_mat, player->fd);
+        write_board(&game->stone_mat, opponent->fd);
+        mat_print(&game->stone_mat);
 
         // check if the player wins
-        int win = check_win(&game.stone_mat, row, col, player->id);
+        int win = check_win(&game->stone_mat, row, col, player->id);
 
         // write end message
         if (win == 1) {
@@ -142,7 +151,7 @@ int main(int argc, char **argv){
             write(player->fd, WIN_MSG, strlen(WIN_MSG));
             char *LOST_MSG = "You Lost!";
             write(opponent->fd, LOST_MSG, strlen(LOST_MSG));
-            exit(0);
+            return player->id;
         }
 
         char *WAIT_MSG = "Wait for another player to make a move...\n";
@@ -153,4 +162,82 @@ int main(int argc, char **argv){
         player = opponent;
         opponent = tmp;
     }
+}
+
+// int check_start_new_round(struct client *p1, struct client *p2){
+//     char *NEW_MSG = "DO you want to start a new round?(y/n)";
+//     write(p1->fd, NEW_MSG, strlen(NEW_MSG));
+//     write(p2->fd, NEW_MSG, strlen(NEW_MSG));
+
+//     int p1_start = 0;
+//     int p2_start = 0;
+
+//     while(1){
+//         char *INPUT_INDICT = ">";
+//         if (p1_start == 1){
+//             write(p1->fd, INPUT_INDICT, strlen(INPUT_INDICT));
+
+//         }
+        
+//         write(p2->fd, INPUT_INDICT, strlen(INPUT_INDICT));
+
+//         int p1_str_len = read_from_input(p1->inbuf, p1->fd);
+//         if (p1_str_len == -1){ // input error
+//             printf("Error: Fail to read from %s player\n", p1->stone_name);
+//             exit(1);
+//         }
+
+//         int p2_str_len = read_from_input(p2->inbuf, p2->fd);
+//         if (p2_str_len == -1){ // input error
+//             printf("Error: Fail to read from %s player\n", p2->stone_name);
+//             exit(1);
+//         }
+
+//         if (p1->inbuf[0] == 'n' || p2->inbuf[0] == 'n'){
+//             return 1;
+//         } else if (p1->inbuf[0] == 'y'){
+//             p1_start = 1;
+//         } else if (p2->inbuf[0] == 'y'){
+//             p2_start = 1;
+//         }
+
+//         if (p1_start == 1 && p2_start == 1){
+//             return 0;
+//         }
+//     }
+// }
+
+int main(){
+    // init game
+    struct game_state game;
+    init_game(&game);
+
+    // init socket
+    struct sockaddr_in *server = init_server_addr(PORT);
+
+    // connect players
+    connect_players(&game, server);
+
+    int black_score = 0;
+    int white_score = 0;
+
+    // play rounds
+    while(1){
+        printf("black: %d | white: %d\n", black_score, white_score);
+        char score_str[124];
+        sprintf(score_str, "black: %d | white: %d\n", black_score, white_score);
+        write(game.black->fd, score_str, strlen(score_str));
+        write(game.white->fd, score_str, strlen(score_str));
+
+        int win_id = play_round(&game);
+        if (win_id == 1){
+            black_score++;
+        } else {
+            white_score++;
+        }
+    }
+
+    free(game.black);
+    free(game.white);
+    free(server);
 }
