@@ -171,14 +171,14 @@ void write_board(mat_t *mat, int fd){
     for (int j = 0; j < 10; j++){
         char tmp[3];
         sprintf(tmp, " %d", j);
-        write(fd, tmp, strlen(tmp)+ 1);
+        write(fd, tmp, strlen(tmp));
     }
 
     for (int j = 10; j < cols; j++){
         char index = 'A'+ j - 10;
         char tmp[3];
         sprintf(tmp, " %c", index);
-        write(fd, tmp, strlen(tmp)+1);
+        write(fd, tmp, strlen(tmp));
     }
     write(fd, "\n", 1);
 
@@ -186,12 +186,11 @@ void write_board(mat_t *mat, int fd){
         char index[3];
         if (i < 10){
             sprintf(index, "%d ", i);
-            write(fd, index, strlen(index));
         } else {
             char tmp = 'A' + i - 10;
             sprintf(index, "%c ", tmp);
-            write(fd, index, strlen(&tmp));
         }
+        write(fd, index, strlen(index));
 
         for (int j = 0; j < cols; j++){
             char *tmp;
