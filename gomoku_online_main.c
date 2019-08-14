@@ -66,9 +66,6 @@ int connect_players(struct game_state *game, struct sockaddr_in *server){
             if (game->black != NULL && game->white != NULL){  // both black and white have entered the game
                 printf("Black: %s, White: %s\n", inet_ntoa(game->black->ipaddr), inet_ntoa(game->white->ipaddr));
                 printf("Game starts\n");
-                char *START_MSG = "Game starts!\n";               
-                write(game->black->fd, START_MSG, strlen(START_MSG));
-                write(game->white->fd, START_MSG, strlen(START_MSG));
                 break;
             }
     }
@@ -92,12 +89,14 @@ int play_round(struct game_state *game){
 
     // make a move
     while (1){
-        int row = 0;
+        char row_c;
+        char col_c;
         int col = 0;
+        int row = 0;
 
         // get input from player & update matrix
         //TODO: read input only when it is the player's turn
-        char *TURN_MSG = "It is your turn\n"; 
+        char *TURN_MSG = "It is your turn. usage: <row> <col>\n"; 
         write(player->fd, TURN_MSG, strlen(TURN_MSG)); 
 
         while(1){
@@ -114,25 +113,52 @@ int play_round(struct game_state *game){
                 printf("Error: empty string\n");
                 char *EMPTY_STR_ERR = "Error: empty string\n";
                 write(player->fd, EMPTY_STR_ERR, strlen(EMPTY_STR_ERR));
-            } else if (sscanf(player->inbuf, "%d %d", &row, &col) != 2){ // invalid format
+            } else if (sscanf(player->inbuf, "%c %c", &row_c, &col_c) != 2){ // invalid format
                 printf("Error: invalid format %s\n", player->inbuf);
                 char *FORMAT_ERR = "Error: invalid format. usage: <row> <col>\n";
                 write(player->fd, FORMAT_ERR, strlen(FORMAT_ERR));
-            } else if (row < 0 || row > game->stone_mat.rows){    // row out of bound
-                printf("Error: row %d out of bound\n", row);
-                char *ROW_ERR = "Error: row out of bound\n";
-                write(player->fd, ROW_ERR, strlen(ROW_ERR));
-            } else if (col < 0 || col > game->stone_mat.cols){    // col out of bound
-                printf("Error: row %d out of bound\n", col);
-                char *COL_ERR = "Error: column out of bound\n";
-                write(player->fd, COL_ERR, strlen(COL_ERR));
-            } else if (game->stone_mat.data[row][col] != 0){    // position occupied
-                printf("Error: (%d, %d) has been occupied\n", row, col);
-                char *OCCUPY_ERR = "Error: position occupied\n";
-                write(player->fd, OCCUPY_ERR, strlen(OCCUPY_ERR));
-            } else {
-                mat_add(&game->stone_mat, row, col, player->id);
-                break;
+            } else if (!(row_c >= 'A' && row_c <= 'Z') && !(row_c >= '0' && row_c <= '9')){   // invalid row_c format
+                printf("Error: row %c is not a letter in 'A' and 'Z' or '0' and '9'", row_c);
+                char *ROW_LETTER_ERR = "Error: invalid row format. usage: a letter in 'A' and 'Z' or '0' and '9'\n";
+                write(player->fd, ROW_LETTER_ERR, strlen(ROW_LETTER_ERR));
+            } else if (!(col_c >= 'A' && col_c <= 'Z') && !(col_c >= '0' && col_c <= '9')){   // invalid col format
+                printf("Error: col %c is not a letter in 'A' and 'Z' or '0' and '9'", col_c);
+                char *COL_LETTER_ERR = "Error: invalid col format. usage: a letter in 'A' and 'Z' or '0' and '9'\n";
+                write(player->fd, COL_LETTER_ERR, strlen(COL_LETTER_ERR));
+            } else{
+                printf("row_c: %c, col_c: %c\n", row_c, col_c);
+                // convert col to integer
+                if (col_c >= '0' && col_c <= '9'){
+                    col = col_c - '0';
+                    printf("0-9\n");
+                } else {
+                    printf("A-Z\n");
+                    col = col_c - 'A' + 10;
+                }
+                // convert row to integer
+                if (row_c >= '0' && row_c <= '9'){
+                    row = row_c - '0';
+                } else {
+                    row = row_c - 'A' + 10;
+                }
+                printf("col: %d, row: %d\n", col, row);
+
+                if (row < 0 || row >= game->stone_mat.rows){    // row out of bound
+                    printf("Error: row %d out of bound\n", row);
+                    char *ROW_ERR = "Error: row out of bound\n";
+                    write(player->fd, ROW_ERR, strlen(ROW_ERR));
+                } else if (col < 0 || col >= game->stone_mat.cols){    // col out of bound
+                    printf("Error: row %d out of bound\n", col);
+                    char *COL_ERR = "Error: column out of bound\n";
+                    write(player->fd, COL_ERR, strlen(COL_ERR));
+                } else if (game->stone_mat.data[row][col] != 0){    // position occupied
+                    printf("Error: (%d, %d) has been occupied\n", row, col);
+                    char *OCCUPY_ERR = "Error: position occupied\n";
+                    write(player->fd, OCCUPY_ERR, strlen(OCCUPY_ERR));
+                } else {
+                    mat_add(&game->stone_mat, row, col, player->id);
+                    break;
+                }
             }
         }
 
@@ -223,9 +249,9 @@ int main(){
 
     // play rounds
     while(1){
-        printf("black: %d | white: %d\n", black_score, white_score);
+        printf("Black: %d | White: %d\n", black_score, white_score);
         char score_str[124];
-        sprintf(score_str, "black: %d | white: %d\n", black_score, white_score);
+        sprintf(score_str, "Game starts!\nblack: %d | white: %d\n", black_score, white_score);
         write(game.black->fd, score_str, strlen(score_str));
         write(game.white->fd, score_str, strlen(score_str));
 
@@ -235,6 +261,7 @@ int main(){
         } else {
             white_score++;
         }
+        mat_zero_out(&game.stone_mat);
     }
 
     free(game.black);

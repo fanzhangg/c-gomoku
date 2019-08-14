@@ -159,6 +159,7 @@ int check_win(mat_t *stone_mat, int row, int col, int player){
 }
 
 /* Write the board to the client, format as:
+ *  1 2
  * |○|●|
  * |●|○|
  */
@@ -166,7 +167,32 @@ void write_board(mat_t *mat, int fd){
     int **data = mat->data;
     int rows = mat->rows;
     int cols = mat->cols;
+    write(fd, "  ", 2);
+    for (int j = 0; j < 10; j++){
+        char tmp[3];
+        sprintf(tmp, " %d", j);
+        write(fd, tmp, strlen(tmp)+ 1);
+    }
+
+    for (int j = 10; j < cols; j++){
+        char index = 'A'+ j - 10;
+        char tmp[3];
+        sprintf(tmp, " %c", index);
+        write(fd, tmp, strlen(tmp)+1);
+    }
+    write(fd, "\n", 1);
+
     for (int i = 0; i < rows; i++){
+        char index[3];
+        if (i < 10){
+            sprintf(index, "%d ", i);
+            write(fd, index, strlen(index));
+        } else {
+            char tmp = 'A' + i - 10;
+            sprintf(index, "%c ", tmp);
+            write(fd, index, strlen(&tmp));
+        }
+
         for (int j = 0; j < cols; j++){
             char *tmp;
             if (data[i][j] == 0){
@@ -180,4 +206,5 @@ void write_board(mat_t *mat, int fd){
         }
         write(fd, "|\n", 2);
     }
+    write(fd, "\n", 1);
 }
