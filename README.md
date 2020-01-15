@@ -1,5 +1,5 @@
 # C Gomoku
-This is an online gomoku game using socket in C
+This is an online terminal gomoku game. It is written in C, and uses socket to support networking.
 
 ## Usage
 ```shell
